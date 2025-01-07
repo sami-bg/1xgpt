@@ -16,6 +16,7 @@ class BasicSelfAttention(nn.Module):
         qk_norm: bool = True,
         use_mup: bool = True,
         attn_drop: float = 0.0,
+        enable_resvalue: bool = False,
     ) -> None:
         super().__init__()
 
@@ -27,13 +28,23 @@ class BasicSelfAttention(nn.Module):
         self.qkv = nn.Linear(d_model, d_model * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(d_model, d_model, bias=proj_bias)
+        self.enable_resvalue = enable_resvalue
+
         self.qk_norm = qk_norm
         if self.qk_norm:
             # qk normalization https://arxiv.org/pdf/2302.05442
             # Note that LN is done in fp32, so they have to be
             self.norm = nn.LayerNorm(self.head_dim, eps=1e-05)
 
-    def forward(self, x: torch.Tensor, causal: bool = False) -> torch.Tensor:
+        if self.enable_resvalue:
+            self.lamb1 = nn.Parameter(torch.tensor(0.5))
+            self.lamb2 = nn.Parameter(torch.tensor(0.5))
+
+    def forward(
+            self, x: torch.Tensor,
+            causal: bool = False,
+            v_res: torch.Tensor = None
+        ) -> torch.Tensor:
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
 
@@ -55,6 +66,9 @@ class BasicSelfAttention(nn.Module):
             attn = attn.masked_fill(mask, mask_value)
 
         attn = attn.softmax(dim=-1)
+        if self.enable_resvalue and v_res is not None:
+            assert v_res.shape == v.shape
+            v = (self.lamb1 * v) + (self.lamb2 * v_res)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
@@ -64,7 +78,12 @@ class BasicSelfAttention(nn.Module):
 class MemoryEfficientAttention(BasicSelfAttention):
     # NOTE: Mem-eff attention from xformers is actually Flash Attention 2
         
-    def forward(self, x: torch.Tensor, causal: bool = False) -> torch.Tensor:
+    def forward(
+            self,
+            x: torch.Tensor,
+            causal: bool = False,
+            v_res: torch.Tensor = None,
+        ) -> torch.Tensor:
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim)
         q, k, v = unbind(qkv, 2)
@@ -74,6 +93,10 @@ class MemoryEfficientAttention(BasicSelfAttention):
             # LN done in float32, cast back to bf16
             q = q.to(dtype=v.dtype)
             k = k.to(dtype=v.dtype)
+
+        if self.enable_resvalue and v_res is not None:
+            assert v_res.shape == v.shape
+            v = (self.lamb1 * v) + (self.lamb2 * v_res)
 
         attn_bias = LowerTriangularMask() if causal else None
         x = memory_efficient_attention(q, k, v, attn_bias=attn_bias, scale=self.scale)

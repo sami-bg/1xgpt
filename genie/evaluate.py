@@ -164,7 +164,8 @@ def main():
     if args.save_outputs_dir is not None:
         outputs_to_save = defaultdict(list)
 
-    for batch in tqdm(dataloader):
+    for i,batch in tqdm(enumerate(dataloader)):
+        print(f'Batch {i}/{len(dataloader)}')
         batch_size = batch["input_ids"].size(0)
         reshaped_input_ids = rearrange(batch["input_ids"], "b (t h w) -> b t h w", t=WINDOW_SIZE,
                                        h=args.latent_h, w=args.latent_w)

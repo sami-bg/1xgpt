@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: Train Genie 35M",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--genie_config", "genie/configs/genie35M_n32_h8_d256.json",
+                "--output_dir", "data/genie_model",
+                "--max_eval_steps", "10"
+            ]
+        },
+        {
+            "name": "Python Debugger: Evaluate HF Genie 35M",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/genie/evaluate.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--checkpoint_dir", "1x-technologies/GENIE_35M",
+                "--maskgit_steps", "2"
+            ]
+        }
+    ]
+}

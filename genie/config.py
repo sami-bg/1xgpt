@@ -31,6 +31,7 @@ class GenieConfig:
     proj_bias: bool = True
     attn_drop: float = 0.0
     qk_norm: bool = True
+    enable_resvalue: bool = False
 
     # MLP
     mlp_ratio: float = 4.0
