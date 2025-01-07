@@ -45,6 +45,8 @@ class STMaskGIT(nn.Module, PyTorchModelHubMixin):
             mlp_ratio=config.mlp_ratio,
             mlp_bias=config.mlp_bias,
             mlp_drop=config.mlp_drop,
+            enable_resvalue_spatial=config.enable_resvalue_spatial,
+            enable_resvalue_temporal=config.enable_resvalue_temporal
         )
 
         self.pos_embed_TSC = torch.nn.Parameter(torch.zeros(1, config.T, config.S, config.d_model))

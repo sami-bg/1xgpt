@@ -39,6 +39,8 @@ class STBlock(nn.Module):
         mlp_ratio: float = 4.0,
         mlp_bias: bool = True,
         mlp_drop: float = 0.0,
+        enable_resvalue_spatial: bool = False,
+        enable_resvalue_temporal: bool = False
     ) -> None:
         super().__init__()
         self.norm1 = nn.Identity() if qk_norm else nn.LayerNorm(d_model, eps=1e-05)
@@ -51,6 +53,7 @@ class STBlock(nn.Module):
             qk_norm=qk_norm,
             use_mup=use_mup,
             attn_drop=attn_drop,
+            enable_resvalue=enable_resvalue_spatial
         )
 
         # sequence dim is over time sequence (16)
@@ -62,6 +65,7 @@ class STBlock(nn.Module):
             qk_norm=qk_norm,
             use_mup=use_mup,
             attn_drop=attn_drop,
+            enable_resvalue=enable_resvalue_temporal
         )
         
         self.norm2 = nn.Identity() if qk_norm else nn.LayerNorm(d_model, eps=1e-05)
@@ -97,6 +101,8 @@ class STTransformerDecoder(nn.Module):
         mlp_ratio: float = 4.0,
         mlp_bias: bool = True,
         mlp_drop: float = 0.0,
+        enable_resvalue_spatial: bool = False,
+        enable_resvalue_temporal: bool = False,
     ):
         super().__init__()
         self.layers = nn.ModuleList([STBlock(
@@ -110,6 +116,8 @@ class STTransformerDecoder(nn.Module):
             mlp_ratio=mlp_ratio,
             mlp_bias=mlp_bias,
             mlp_drop=mlp_drop,
+            enable_resvalue_spatial=enable_resvalue_spatial,
+            enable_resvalue_temporal=enable_resvalue_temporal,
         ) for _ in range(num_layers)])
 
     def forward(self, tgt):
